@@ -1,0 +1,25 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# dataset (download separately, see README)
+data/val2014-resised/
+data/*.txt
+
+# Trained artifacts: the demo checkpoint (cnn_lstm_model.pt, ~11MB) is
+# intentionally committed under artifacts/ so the API and Docker image
+# work out of the box. If you retrain with a bigger backbone/dataset,
+# consider moving large checkpoints to Git LFS or a model registry
+# instead of committing them directly.
+
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+.DS_Store
+.idea/
+.vscode/
+*.log
