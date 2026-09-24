@@ -46,7 +46,20 @@ python -m src.train_cnn_lstm --limit 100 --epochs 1
 
 Set `VQA_DATA_DIR` and `VQA_ARTIFACTS_DIR` when the data or model files are
 stored elsewhere. The training command writes the vocabulary, labels and
-checkpoint to the artifacts directory.
+checkpoint to the artifacts directory. Training evaluates accuracy, macro
+precision/recall/F1, a majority-class baseline, and a confusion matrix. It
+uses validation macro-F1 for early stopping, writes
+`artifacts/cnn_lstm_epoch_<N>.pt` each epoch, and keeps the best model in
+`artifacts/cnn_lstm_best.pt`.
+
+To resume from an epoch checkpoint:
+
+```bash
+python -m src.train_cnn_lstm --epochs 10 --resume artifacts/cnn_lstm_epoch_3.pt
+```
+
+The final `cnn_lstm_model.pt` contains the best validation model, training
+history, selected epoch, and final validation/test metrics.
 
 ## API example
 
@@ -66,7 +79,8 @@ Example response:
 }
 ```
 
-`/health` reports whether the model was loaded. For production deployments,
+`/health` reports whether the model was loaded. `/live` is a process liveness
+check and `/ready` returns HTTP 503 until the model is loaded. For production deployments,
 use a separate readiness check at the reverse proxy/orchestrator layer and
 configure CORS to allow only trusted origins. Set `VQA_ALLOWED_ORIGINS` to a
 comma-separated list of origins and `VQA_API_KEY` to enable the optional
