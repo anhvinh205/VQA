@@ -1,10 +1,24 @@
-from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class PredictionResponse(BaseModel):
-    answer: str = Field(..., description="Predicted answer: 'yes' or 'no'")
-    confidence: float = Field(..., description="Softmax probability of the predicted answer")
-    probabilities: dict[str, float] = Field(..., description="Per-class probabilities")
+    answer: Literal["yes", "no"] = Field(..., description="Predicted answer")
+    confidence: float = Field(..., ge=0.0, le=1.0, description="Predicted-class probability")
+    probabilities: dict[Literal["yes", "no"], float] = Field(
+        ..., description="Per-class probabilities for yes and no"
+    )
+
+    @model_validator(mode="after")
+    def validate_probabilities(self) -> "PredictionResponse":
+        if set(self.probabilities) != {"yes", "no"}:
+            raise ValueError("probabilities must contain exactly 'yes' and 'no'")
+        if abs(sum(self.probabilities.values()) - 1.0) > 1e-3:
+            raise ValueError("probabilities must sum to 1")
+        if abs(self.confidence - self.probabilities[self.answer]) > 1e-3:
+            raise ValueError("confidence must match the probability of answer")
+        return self
 
 
 class HealthResponse(BaseModel):

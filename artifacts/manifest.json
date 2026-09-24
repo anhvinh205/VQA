@@ -1,0 +1,12 @@
+{
+  "model": "cnn_lstm_model.pt",
+  "model_type": "CNN+BiLSTM",
+  "task": "binary yes/no VQA",
+  "source": "repository demo artifact",
+  "sha256": {
+    "cnn_lstm_model.pt": "1E070F824BABDD9FD2E097D6313FAF87083653DE81F34D9A0D2D5F43F9D8E746",
+    "labels.json": "AF36A2315958AF0DA8B7A6E55FE0B6A4ACA67227D09646BBE9D29CB71687032B",
+    "vocab.json": "35BC46C0EAA635AAAE915883957E20E9D00AC9C41C234309DFB6F41AC3B7BD32"
+  },
+  "update_command": "Get-FileHash artifacts\\cnn_lstm_model.pt -Algorithm SHA256"
+}
