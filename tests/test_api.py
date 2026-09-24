@@ -3,8 +3,10 @@ import io
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
+from pydantic import ValidationError
 
 from app.main import app, predictor_state
+from app.schemas import PredictionResponse
 
 
 class _FakePredictor:
@@ -77,3 +79,21 @@ def test_predict_rejects_bad_content_type(client):
         data={"question": "Is this red?"},
     )
     assert resp.status_code == 415
+
+
+def test_prediction_response_validates_probability_contract():
+    response = PredictionResponse(
+        answer="yes",
+        confidence=0.87,
+        probabilities={"yes": 0.87, "no": 0.13},
+    )
+    assert response.answer == "yes"
+
+
+def test_prediction_response_rejects_mismatched_confidence():
+    with pytest.raises(ValidationError):
+        PredictionResponse(
+            answer="yes",
+            confidence=0.6,
+            probabilities={"yes": 0.87, "no": 0.13},
+        )

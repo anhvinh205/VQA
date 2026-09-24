@@ -37,6 +37,12 @@ def main() -> None:
     parser.add_argument("--model-id", default="llava-hf/llava-1.5-7b-hf")
     args = parser.parse_args()
 
+    if not torch.cuda.is_available():
+        raise RuntimeError(
+            "LLaVA 4-bit inference requires a CUDA GPU with bitsandbytes support; "
+            "the CPU fallback is not supported for this 7B model."
+        )
+
     from transformers import (
         AutoProcessor,
         BitsAndBytesConfig,
@@ -49,7 +55,7 @@ def main() -> None:
     image = Image.open(config.IMAGE_DIR / sample["image_path"])
 
     quantization_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16)
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    device = "cuda"
     processor = AutoProcessor.from_pretrained(args.model_id)
     model = LlavaForConditionalGeneration.from_pretrained(
         args.model_id, quantization_config=quantization_config, device_map=device

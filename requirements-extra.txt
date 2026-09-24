@@ -1,6 +1,6 @@
-# Optional: only needed to run src/train_vit_roberta-style pipelines
-# and src/infer_vlm.py (part II.2 / II.3 of the project). Not
-# installed in the API's Docker image to keep it small.
+# Optional dependencies for the ViT+RoBERTa and LLaVA pipelines.
+# Install with: pip install -r requirements-extra.txt
+# These are intentionally excluded from the API image to keep it small.
 transformers==4.42.3
 timm==1.0.7
 bitsandbytes==0.43.1
