@@ -1,8 +1,3 @@
-"""Central configuration for the VQA (Yes/No) project.
-
-All paths and hyperparameters are collected here so that training,
-inference and the API all agree on the same values.
-"""
 from __future__ import annotations
 
 import os
@@ -22,13 +17,9 @@ VOCAB_PATH = ARTIFACTS_DIR / "vocab.json"
 LABELS_PATH = ARTIFACTS_DIR / "labels.json"
 CNN_LSTM_CHECKPOINT = ARTIFACTS_DIR / "cnn_lstm_model.pt"
 
-
 @dataclass
 class CNNLSTMConfig:
-    """Hyperparameters for the CNN + BiLSTM baseline (see project part II.1)."""
-
     img_model_name: str = "resnet18"
-    pretrained_backbone: bool = os.environ.get("VQA_PRETRAINED", "0") == "1"
     embedding_dim: int = 128
     hidden_size: int = 256
     n_layers: int = 2
@@ -42,6 +33,6 @@ class CNNLSTMConfig:
     seed: int = 59
     min_freq: int = 2
     specials: list = field(default_factory=lambda: ["<pad>", "<sos>", "<eos>", "<unk>"])
-
-
-CNN_LSTM_CFG = CNNLSTMConfig()
+    pretrained_backbone: bool = os.environ.get("VQA_PRETRAINED", "0") == "1"
+    early_stopping_patience: int = 3
+    early_stopping_min_delta: float = 1e-4
