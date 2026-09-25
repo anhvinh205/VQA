@@ -1,10 +1,7 @@
-"""Loads the trained CNN+LSTM checkpoint and exposes a single predict() call.
-
-Used by the FastAPI service. Kept separate from the API layer so it
-can also be imported directly (e.g. from a notebook or a test).
-"""
+"""Load the trained CNN+LSTM checkpoint and expose a single predict() call."""
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import logging
@@ -15,10 +12,29 @@ from PIL import Image
 
 from src import config
 from src.data.dataset import build_transforms
-from src.data.vocab import Vocab
+from src.data.vocab import PAD, Vocab
 from src.models.cnn_lstm import VQAModel
 
 logger = logging.getLogger(__name__)
+
+
+def _verify_checkpoint_integrity(checkpoint_path: Path) -> None:
+    manifest_path = checkpoint_path.parent / "manifest.json"
+    if not manifest_path.exists():
+        return
+
+    with manifest_path.open(encoding="utf-8") as manifest_file:
+        manifest = json.load(manifest_file)
+    expected_hash = manifest.get("sha256", {}).get(checkpoint_path.name)
+    if not expected_hash:
+        return
+
+    digest = hashlib.sha256()
+    with checkpoint_path.open("rb") as checkpoint_file:
+        for chunk in iter(lambda: checkpoint_file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    if digest.hexdigest().upper() != expected_hash.upper():
+        raise ValueError(f"Checkpoint integrity verification failed for {checkpoint_path}")
 
 
 class VQAPredictor:
@@ -36,7 +52,8 @@ class VQAPredictor:
             label2idx = json.load(f)
         self.idx2label = {v: k for k, v in label2idx.items()}
 
-        checkpoint = torch.load(checkpoint_path, map_location=self.device)
+        _verify_checkpoint_integrity(checkpoint_path)
+        checkpoint = torch.load(checkpoint_path, map_location=self.device, weights_only=True)
         cfg = checkpoint["config"]
         self.max_seq_len = cfg["max_seq_len"]
 
@@ -48,15 +65,17 @@ class VQAPredictor:
             n_layers=cfg["n_layers"],
             hidden_size=cfg["hidden_size"],
             drop_p=cfg["dropout"],
-            pretrained_backbone=False,  # weights come from the checkpoint, not a fresh download
+            pad_idx=self.vocab[PAD],
+            pretrained_backbone=cfg.get("pretrained_backbone", False),
         )
-        self.model.load_state_dict(checkpoint["model_state"])
+        model_state = checkpoint.get("model_state") or checkpoint["model_state_dict"]
+        self.model.load_state_dict(model_state)
         self.model.to(self.device)
         self.model.eval()
 
         self.transform = build_transforms(cfg["image_size"])["eval"]
         logger.info("loaded VQA predictor on %s", self.device)
-
+        
     @torch.no_grad()
     def predict(self, image_bytes: bytes, question: str) -> dict:
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")

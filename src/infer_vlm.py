@@ -1,13 +1,3 @@
-"""Zero-shot VQA inference with a pretrained LVLM (LLaVA-1.5-7B).
-
-This is the third approach from the project (part II.3): no
-training, just prompting a pretrained vision-language model. Requires
-a GPU with bitsandbytes 4-bit quantization support and the
-`transformers`/`bitsandbytes` extras. Not used by the FastAPI service
-(too heavy for a small deployment) — run standalone for exploration:
-
-    python -m src.infer_vlm --index 0
-"""
 from __future__ import annotations
 
 import argparse
@@ -19,7 +9,6 @@ from PIL import Image
 from src import config
 from src.data.loader import load_split
 
-
 def create_prompt(question: str) -> str:
     return (
         "### INSTRUCTION:\n"
@@ -29,8 +18,7 @@ def create_prompt(question: str) -> str:
         f"{question}\n"
         "### ASSISTANT:"
     )
-
-
+    
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--index", type=int, default=0)
@@ -70,18 +58,17 @@ def main() -> None:
         eos_token_id=model.config.eos_token_id,
         pad_token=model.config.pad_token_id,
     )
-
+    
     prompt = create_prompt(sample["question"])
-    inputs = processor(prompt, image, padding=True, return_tensors="pt").to(device)
-    output = model.generate(**inputs, generation_config=generation_config)
-    generated_text = processor.decode(output[0], skip_special_tokens=True)
-
-    prediction = generated_text.split("### ASSISTANT:")[-1].strip()
+    inputs = processor(images=image, text=prompt, return_tensors="pt").to(device)
+    outputs = model.generate(**inputs, generation_config=generation_config)
+    generated_text = processor.batch_decode(outputs, skip_special_tokens=True)[0]
+    
+    predicted_answer = generated_text.split("### ASSISTANT:")[-1].strip()
     print(f"Question: {sample['question']}")
     print(f"Label: {sample['answer']}")
-    print(f"Prediction: {prediction}")
-
-
+    print(f"Predicted Answer: {predicted_answer}")
+    
 if __name__ == "__main__":
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     main()

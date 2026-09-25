@@ -2,7 +2,6 @@ from pathlib import Path
 
 from src.data.loader import load_split
 
-
 def test_load_split_parses_lines(tmp_path: Path):
     split_file = tmp_path / "split.txt"
     split_file.write_text(
@@ -20,7 +19,6 @@ def test_load_split_parses_lines(tmp_path: Path):
 
 
 def test_load_split_handles_question_mark_in_answer_split(tmp_path: Path):
-    # Some lines have an extra '?' inside them, producing 3 parts after split('?')
     split_file = tmp_path / "split.txt"
     split_file.write_text(
         "img.jpg#0\tIs this a ? weird question ? yes\n",

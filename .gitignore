@@ -8,11 +8,12 @@ venv/
 data/val2014-resised/
 data/*.txt
 
-# Trained artifacts: the demo checkpoint (cnn_lstm_model.pt, ~11MB) is
-# intentionally committed under artifacts/ so the API and Docker image
-# work out of the box. If you retrain with a bigger backbone/dataset,
-# consider moving large checkpoints to Git LFS or a model registry
-# instead of committing them directly.
+# Trained artifacts: no checkpoint is shipped in this repo — train
+# your own after cloning (`python -m src.train_cnn_lstm`, requires
+# internet access to download the pretrained ResNet18 weights).
+# Keep large checkpoints out of git; use Git LFS or a model registry
+# if you want to version them.
+artifacts/*.pt
 
 .pytest_cache/
 .ruff_cache/

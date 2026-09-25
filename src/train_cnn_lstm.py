@@ -26,6 +26,13 @@ def seed(seed: int) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
+    if torch.cuda.is_available():
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+
+def load_checkpoint(path: Path, device: str) -> dict:
+    return torch.load(path, map_location=device, weights_only=True)
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -90,7 +97,7 @@ def main() -> None:
 
     start_epoch = 0
     if args.resume:
-        resume = torch.load(args.resume, map_location=device)
+        resume = load_checkpoint(args.resume, device)
         model.load_state_dict(resume["model_state"])
         optimizer.load_state_dict(resume["optimizer_state"])
         scheduler.load_state_dict(resume["scheduler_state"])
