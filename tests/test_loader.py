@@ -2,6 +2,7 @@ from pathlib import Path
 
 from src.data.loader import load_split
 
+
 def test_load_split_parses_lines(tmp_path: Path):
     split_file = tmp_path / "split.txt"
     split_file.write_text(
