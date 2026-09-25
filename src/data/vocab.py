@@ -6,8 +6,6 @@ from collections import Counter
 from pathlib import Path
 from typing import Iterable
 
-from PIL.Image import item
-
 _TOKEN_RE = re.compile(r"[A-Za-z']+|[?.,!]")
 
 PAD, SOS, EOS, UNK = "<pad>", "<sos>", "<eos>", "<unk>"
@@ -17,18 +15,19 @@ SPECIALS = [PAD, SOS, EOS, UNK]
 def tokenize_words(text: str) -> list[str]:
     return [tok.lower() for tok in _TOKEN_RE.findall(text)]
 
+
 class Vocab:
     def __init__(self, token_to_idx: dict[str, int]):
         self.token_to_idx = token_to_idx
         self.idx_to_token = {idx: tok for tok, idx in token_to_idx.items()}
         self.default_index = token_to_idx[UNK]
-        
+
     def __len__(self) -> int:
         return len(self.token_to_idx)
-    
+
     def __getitem__(self, token: str) -> int:
         return self.token_to_idx.get(token, self.default_index)
-    
+
     def encode(self, text: str, max_seq_len: int) -> list[int]:
         ids = [self[tok] for tok in tokenize_words(text)]
         if len(ids) < max_seq_len:
@@ -36,18 +35,18 @@ class Vocab:
         else:
             ids = ids[:max_seq_len]
         return ids
-    
+
     def save(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(self.token_to_idx, f)
 
     @classmethod
-    def load(cls, path: Path) -> Vocab:
+    def load(cls, path: Path) -> "Vocab":
         with open(path, "r", encoding="utf-8") as f:
             token_to_idx = json.load(f)
         return cls(token_to_idx)
-    
+
     @classmethod
     def build(
         cls,

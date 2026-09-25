@@ -1,18 +1,20 @@
-from future import annotations
+from __future__ import annotations
 
 import torch
 import torch.nn as nn
 
-class VQAModel(nn.Module):
-    def __init__(self , moudle_name: str ="roberta-base"):
+
+class TextEncoder(nn.Module):
+    def __init__(self, model_name: str = "roberta-base"):
         super().__init__()
         from transformers import RobertaModel
 
         self.model = RobertaModel.from_pretrained(model_name)
-    
+
     def forward(self, inputs: dict) -> torch.Tensor:
         return self.model(**inputs).pooler_output
-    
+
+
 class VisualEncoder(nn.Module):
     def __init__(self, model_name: str = "google/vit-base-patch16-224"):
         super().__init__()
@@ -22,7 +24,8 @@ class VisualEncoder(nn.Module):
 
     def forward(self, inputs: dict) -> torch.Tensor:
         return self.model(**inputs).pooler_output
-    
+
+
 class Classifier(nn.Module):
     def __init__(self, hidden_size: int = 512, dropout_prob: float = 0.2, n_classes: int = 2):
         super().__init__()
@@ -36,7 +39,8 @@ class Classifier(nn.Module):
         x = self.gelu(x)
         x = self.dropout(x)
         return self.fc2(x)
-    
+
+
 class VQAModel(nn.Module):
     def __init__(self, visual_encoder: VisualEncoder, text_encoder: TextEncoder, classifier: Classifier):
         super().__init__()
