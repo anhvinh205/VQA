@@ -13,12 +13,11 @@ from src.data.vocab import Vocab
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 
-
 def build_transforms(image_size: int) -> dict[str, transforms.Compose]:
     return {
         "train": transforms.Compose(
             [
-                transforms.Resize((image_size, image_size)),
+                transforms.Resize((image_size , image_size)),
                 transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
@@ -33,11 +32,9 @@ def build_transforms(image_size: int) -> dict[str, transforms.Compose]:
             ]
         ),
     }
-
-
+    
 class VQADataset(Dataset):
-    """Image + question -> yes/no label."""
-
+    "yes/no label"
     def __init__(
         self,
         samples: list[VQASample],
@@ -53,17 +50,18 @@ class VQADataset(Dataset):
         self.image_dir = Path(image_dir)
         self.transform = transform
         self.max_seq_len = max_seq_len
-
+        
     def __len__(self) -> int:
         return len(self.samples)
-
+    
     def __getitem__(self, index: int):
-        sample = self.samples[index]
-        img = Image.open(self.image_dir / sample["image_path"]).convert("RGB")
-        img = self.transform(img)
-
-        question_ids = self.vocab.encode(sample["question"], self.max_seq_len)
+        sample = self.samples[index],
+        image = Image.open(self.image_dir / sample.image_id).convert("RGB")
+        image = self.transform(image)
+        
+        question_ids = self.vocab.encode(sample.question, self.max_seq_len)
         question_ids = torch.tensor(question_ids, dtype=torch.long)
-
-        label = torch.tensor(self.label2idx[sample["answer"]], dtype=torch.long)
-        return img, question_ids, label
+        
+        label = torch.tensor(self.label2idx[sample.answer], dtype=torch.long)
+        
+        return image, question_ids, label

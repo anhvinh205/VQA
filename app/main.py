@@ -6,11 +6,10 @@ import time
 from contextlib import asynccontextmanager
 from uuid import uuid4
 
-from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.responses import Response
 
-from app.schemas import HealthResponse, PredictionResponse
+from app.schemas import HealthResponse, PredictionResponse, ReadinessResponse
 from src.predictor import VQAPredictor
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -79,7 +78,21 @@ def root():
 
 @app.get("/health", response_model=HealthResponse, tags=["meta"])
 def health():
-    return HealthResponse(status="ok", model_loaded=predictor_state["predictor"] is not None)
+    loaded = predictor_state["predictor"] is not None
+    return HealthResponse(status="ok" if loaded else "degraded", model_loaded=loaded)
+
+
+@app.get("/live", response_model=HealthResponse, tags=["meta"])
+def live():
+    return HealthResponse(status="alive", model_loaded=predictor_state["predictor"] is not None)
+
+
+@app.get("/ready", response_model=ReadinessResponse, tags=["meta"])
+def ready(response: Response):
+    loaded = predictor_state["predictor"] is not None
+    if not loaded:
+        response.status_code = 503
+    return ReadinessResponse(status="ready" if loaded else "not_ready", model_loaded=loaded)
 
 
 @app.post("/predict", response_model=PredictionResponse, tags=["inference"])

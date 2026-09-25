@@ -38,6 +38,13 @@ def test_health(client):
     assert "model_loaded" in resp.json()
 
 
+def test_ready_returns_503_without_model(client):
+    predictor_state["predictor"] = None
+    resp = client.get("/ready")
+    assert resp.status_code == 503
+    assert resp.json()["status"] == "not_ready"
+
+
 def test_predict_without_model_returns_503(client):
     predictor_state["predictor"] = None
     resp = client.post(

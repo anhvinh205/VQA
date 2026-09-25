@@ -2,6 +2,5 @@
 # Install with: pip install -r requirements-extra.txt
 # These are intentionally excluded from the API image to keep it small.
 transformers==4.42.3
-timm==1.0.7
 bitsandbytes==0.43.1
 accelerate==0.31.0

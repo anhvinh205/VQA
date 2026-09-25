@@ -28,5 +28,9 @@ class HealthResponse(BaseModel):
     model_loaded: bool
 
 
+class ReadinessResponse(HealthResponse):
+    pass
+
+
 class ErrorResponse(BaseModel):
     detail: str
