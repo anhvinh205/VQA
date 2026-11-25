@@ -154,6 +154,6 @@ async def predict(
         logger.exception("prediction failed")
         raise HTTPException(status_code=400, detail=f"Could not process image: {exc}") from exc
 
-    if not isinstance(predictor, ObjectDetectionPredictor):
+    if "confidence" in result:
         return ClassifierPredictionResponse(**result)
     return PredictionResponse(**result)

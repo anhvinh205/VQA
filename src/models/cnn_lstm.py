@@ -89,10 +89,13 @@ class VQAModel(nn.Module):
         drop_p: float = 0.3,
         pad_idx: int = 0,
         pretrained_backbone: bool = False,
+        load_pretrained_weights: bool = True,
     ):
         super().__init__()
         if pretrained_backbone:
-            self.image_encoder = SpatialTimmEncoder(img_model_name, pretrained=True)
+            self.image_encoder = SpatialTimmEncoder(
+                img_model_name, pretrained=load_pretrained_weights
+            )
         else:
             self.image_encoder = SmallCNNSpatialEncoder()
 

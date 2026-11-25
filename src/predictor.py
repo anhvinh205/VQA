@@ -67,6 +67,7 @@ class VQAPredictor:
             drop_p=cfg["dropout"],
             pad_idx=self.vocab[PAD],
             pretrained_backbone=cfg.get("pretrained_backbone", False),
+            load_pretrained_weights=False,
         )
         model_state = checkpoint.get("model_state") or checkpoint["model_state_dict"]
         self.model.load_state_dict(model_state)
