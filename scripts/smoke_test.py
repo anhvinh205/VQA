@@ -5,7 +5,7 @@ Usage:
 """
 import sys
 
-import requests
+import httpx
 
 
 def main() -> None:
@@ -15,7 +15,7 @@ def main() -> None:
 
     image_path, question = sys.argv[1], sys.argv[2]
     with open(image_path, "rb") as f:
-        resp = requests.post(
+        resp = httpx.post(
             "http://localhost:8000/predict",
             files={"image": f},
             data={"question": question},

@@ -88,6 +88,7 @@ def fit(
     patience: int = 3,
     min_delta: float = 1e-4,
     checkpoint_callback: Callable[[int, dict[str, Any]], None] | None = None,
+    grad_clip: float | None = None,   # Phase 2: gradient clipping
 ) -> dict[str, Any]:
     history = {"train_loss": [], "val_loss": [], "val_acc": [], "val_macro_f1": []}
     best_macro_f1 = float("-inf")
@@ -103,6 +104,9 @@ def fit(
             optimizer.zero_grad()
             loss = criterion(model(images, questions), labels)
             loss.backward()
+            # Phase 2: clamp gradient để tránh exploding gradients
+            if grad_clip is not None:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=grad_clip)
             optimizer.step()
             batch_losses.append(loss.item())
 

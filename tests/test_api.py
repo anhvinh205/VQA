@@ -3,19 +3,33 @@ import io
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
-from pydantic import ValidationError
 
 from app.main import app, predictor_state
 from app.schemas import PredictionResponse
+from src.detector import ObjectDetectionPredictor
+from src.predictor import VQAPredictor
 
 
 class _FakePredictor:
     def predict(self, image_bytes: bytes, question: str) -> dict:
-        return {"answer": "yes", "confidence": 0.87, "probabilities": {"yes": 0.87, "no": 0.13}}
+        return {
+            "answer": "yes",
+            "target": "dog",
+            "detection_score": 0.87,
+            "threshold": 0.5,
+            "model": ObjectDetectionPredictor.model_name,
+            "detected_objects": [{"label": "dog", "score": 0.87}],
+        }
+
+
+class _FakeClassifierPredictor(VQAPredictor):
+    def predict(self, image_bytes: bytes, question: str) -> dict:
+        return {"answer": "no", "confidence": 0.7, "probabilities": {"no": 0.7, "yes": 0.3}}
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    monkeypatch.setattr("app.main.create_predictor", _FakePredictor)
     with TestClient(app) as c:
         yield c
 
@@ -65,7 +79,23 @@ def test_predict_with_fake_model_succeeds(client):
     assert resp.status_code == 200
     body = resp.json()
     assert body["answer"] == "yes"
-    assert body["confidence"] == 0.87
+    assert body["target"] == "dog"
+    assert body["detection_score"] == 0.87
+    assert body["detected_objects"] == [{"label": "dog", "score": 0.87}]
+
+
+def test_predict_with_cnn_baseline_keeps_legacy_response(client):
+    predictor_state["predictor"] = _FakeClassifierPredictor()
+
+    response = client.post(
+        "/predict",
+        files={"image": ("test.jpg", _sample_image_bytes(), "image/jpeg")},
+        data={"question": "Is this a dog?"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["answer"] == "no"
+    assert response.json()["probabilities"] == {"no": 0.7, "yes": 0.3}
 
 
 def test_predict_rejects_empty_question(client):
@@ -88,19 +118,14 @@ def test_predict_rejects_bad_content_type(client):
     assert resp.status_code == 415
 
 
-def test_prediction_response_validates_probability_contract():
+def test_prediction_response_exposes_detector_score_not_probabilities():
     response = PredictionResponse(
         answer="yes",
-        confidence=0.87,
-        probabilities={"yes": 0.87, "no": 0.13},
+        target="dog",
+        detection_score=0.87,
+        threshold=0.5,
+        model=ObjectDetectionPredictor.model_name,
+        detected_objects=[{"label": "dog", "score": 0.87}],
     )
     assert response.answer == "yes"
-
-
-def test_prediction_response_rejects_mismatched_confidence():
-    with pytest.raises(ValidationError):
-        PredictionResponse(
-            answer="yes",
-            confidence=0.6,
-            probabilities={"yes": 0.87, "no": 0.13},
-        )
+    assert response.detection_score == 0.87

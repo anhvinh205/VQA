@@ -16,11 +16,13 @@ IMAGENET_STD = (0.229, 0.224, 0.225)
 
 def build_transforms(image_size: int) -> dict[str, transforms.Compose]:
     return {
+        # Phase 2: augmentation mạnh hơn — giúp model robust với ảnh thực tế
         "train": transforms.Compose(
             [
-                transforms.Resize((image_size, image_size)),
-                transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1),
-                transforms.RandomHorizontalFlip(),
+                transforms.RandomResizedCrop(image_size, scale=(0.7, 1.0)),
+                transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.1),
+                transforms.RandomHorizontalFlip(p=0.5),
+                transforms.RandomRotation(degrees=10),
                 transforms.ToTensor(),
                 transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
             ]

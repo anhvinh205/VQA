@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import TypedDict
 
@@ -20,7 +21,7 @@ def load_split(path: Path) -> list[VQASample]:
             question_text, answer = qa.rsplit("?", maxsplit=1)
             samples.append(
                 VQASample(
-                    image_path=image_tag.removesuffix("#0"),
+                    image_path=re.sub(r"#\d+$", "", image_tag),
                     question=question_text.strip() + "?",
                     answer=answer.strip(),
                 )

@@ -8,11 +8,13 @@ venv/
 data/val2014-resised/
 data/*.txt
 
-# Trained artifacts: no checkpoint is shipped in this repo — train
-# your own after cloning (`python -m src.train_cnn_lstm`, requires
-# internet access to download the pretrained ResNet18 weights).
-# Keep large checkpoints out of git; use Git LFS or a model registry
-# if you want to version them.
+# Archive and container exports
+*.tar
+*.zip
+
+# Keep newly generated training checkpoints out of Git; the bundled demo
+# checkpoint is already tracked. Use Git LFS or a model registry for large
+# or frequently updated models.
 artifacts/*.pt
 
 .pytest_cache/

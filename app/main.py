@@ -4,12 +4,20 @@ import logging
 import os
 import time
 from contextlib import asynccontextmanager
+from typing import Any
 from uuid import uuid4
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.concurrency import run_in_threadpool
 
-from app.schemas import HealthResponse, PredictionResponse, ReadinessResponse
+from app.schemas import (
+    ClassifierPredictionResponse,
+    HealthResponse,
+    PredictionResponse,
+    ReadinessResponse,
+)
+from src.detector import ObjectDetectionPredictor, UnsupportedQuestionError
 from src.predictor import VQAPredictor
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -23,16 +31,29 @@ ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
-predictor_state: dict[str, VQAPredictor | None] = {"predictor": None}
+predictor_state: dict[str, Any] = {"predictor": None}
+
+
+def create_predictor():
+    backend = os.environ.get("VQA_MODEL_BACKEND", "detector").strip().casefold()
+    if backend == "detector":
+        return ObjectDetectionPredictor()
+    if backend == "cnn_lstm":
+        return VQAPredictor()
+    if backend == "vit_roberta":
+        from src.predictor_vit import VitRobertaPredictor
+
+        return VitRobertaPredictor()
+    raise ValueError("VQA_MODEL_BACKEND must be 'detector', 'cnn_lstm', or 'vit_roberta'")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
-        predictor_state["predictor"] = VQAPredictor()
-        logger.info("model loaded successfully")
-    except FileNotFoundError as exc:
-        logger.warning("model artifacts not found, /predict will return 503: %s", exc)
+        predictor_state["predictor"] = create_predictor()
+        logger.info("prediction backend loaded successfully")
+    except Exception as exc:
+        logger.exception("prediction backend could not be loaded: %s", exc)
         predictor_state["predictor"] = None
     yield
     predictor_state.clear()
@@ -40,7 +61,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Visual Question Answering API",
-    description="Yes/No Visual Question Answering service (CNN + BiLSTM backbone).",
+    description="CPU object detection API for yes/no questions about supported object categories.",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -95,10 +116,14 @@ def ready(response: Response):
     return ReadinessResponse(status="ready" if loaded else "not_ready", model_loaded=loaded)
 
 
-@app.post("/predict", response_model=PredictionResponse, tags=["inference"])
+@app.post(
+    "/predict",
+    response_model=PredictionResponse | ClassifierPredictionResponse,
+    tags=["inference"],
+)
 async def predict(
-    image: UploadFile = File(..., description="JPEG/PNG image"),
-    question: str = Form(..., description="Yes/No question about the image"),
+    image: UploadFile = File(..., description="JPEG, PNG, or WebP image"),
+    question: str = Form(..., description="Yes/no question about a supported object category"),
     x_api_key: str | None = Header(default=None, alias="X-API-Key"),
 ):
     if API_KEY is not None and x_api_key != API_KEY:
@@ -106,7 +131,10 @@ async def predict(
 
     predictor = predictor_state["predictor"]
     if predictor is None:
-        raise HTTPException(status_code=503, detail="Model not loaded. Train and place a checkpoint first.")
+        raise HTTPException(
+            status_code=503,
+            detail="Prediction backend not loaded. Check server startup logs.",
+        )
 
     if image.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(status_code=415, detail=f"Unsupported content type: {image.content_type}")
@@ -119,9 +147,13 @@ async def predict(
         raise HTTPException(status_code=422, detail="Uploaded image is empty")
 
     try:
-        result = predictor.predict(image_bytes, question)
+        result = await run_in_threadpool(predictor.predict, image_bytes, question)
+    except UnsupportedQuestionError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     except Exception as exc:  # noqa: BLE001 - surface as a clean 400 to the client
         logger.exception("prediction failed")
         raise HTTPException(status_code=400, detail=f"Could not process image: {exc}") from exc
 
+    if not isinstance(predictor, ObjectDetectionPredictor):
+        return ClassifierPredictionResponse(**result)
     return PredictionResponse(**result)

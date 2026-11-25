@@ -27,3 +27,12 @@ def test_load_split_handles_question_mark_in_answer_split(tmp_path: Path):
     )
     samples = load_split(split_file)
     assert samples[0]["answer"] == "yes"
+
+
+def test_load_split_removes_nonzero_question_index_from_image_path(tmp_path: Path):
+    split_file = tmp_path / "split.txt"
+    split_file.write_text("img.jpg#12\tIs this a dog ? yes\n", encoding="utf-8")
+
+    samples = load_split(split_file)
+
+    assert samples[0]["image_path"] == "img.jpg"
