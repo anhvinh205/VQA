@@ -116,10 +116,17 @@ def main() -> None:
 
     # Phase 2: num_workers=2 trên Colab/Linux để tăng tốc data loading
     num_workers = 2 if device == "cuda" else 0
+    pin_mem = device == "cuda"
     train_batch = args.batch_size or cfg.train_batch_size
-    train_loader = DataLoader(train_ds, batch_size=train_batch, shuffle=True, num_workers=num_workers, pin_memory=(device == "cuda"))
-    val_loader = DataLoader(val_ds, batch_size=cfg.eval_batch_size, shuffle=False, num_workers=num_workers, pin_memory=(device == "cuda"))
-    test_loader = DataLoader(test_ds, batch_size=cfg.eval_batch_size, shuffle=False, num_workers=num_workers, pin_memory=(device == "cuda"))
+    train_loader = DataLoader(
+        train_ds, batch_size=train_batch, shuffle=True, num_workers=num_workers, pin_memory=pin_mem
+    )
+    val_loader = DataLoader(
+        val_ds, batch_size=cfg.eval_batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_mem
+    )
+    test_loader = DataLoader(
+        test_ds, batch_size=cfg.eval_batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_mem
+    )
 
     effective_pretrained = args.pretrained or cfg.pretrained_backbone
     model = VQAModel(
@@ -150,7 +157,8 @@ def main() -> None:
 
     param_groups = [{"params": other_params, "lr": effective_lr}]
     if backbone_params:
-        # Phase 3: Differential Learning Rate (Backbone học chậm hơn 10x để tránh overfit và bảo toàn pretrained weights)
+        # Phase 3: Differential Learning Rate (Backbone học chậm hơn 10x
+        # để tránh overfit và bảo toàn pretrained weights)
         param_groups.append({"params": backbone_params, "lr": effective_lr * 0.1})
 
     optimizer = torch.optim.AdamW(param_groups, weight_decay=1e-3)

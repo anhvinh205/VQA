@@ -2,8 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
-import json
 import logging
 import random
 from pathlib import Path
@@ -95,7 +93,9 @@ def seed(seed_val: int) -> None:
 
 
 @torch.no_grad()
-def evaluate_vit(model: VQAModel, data_loader: DataLoader, criterion: nn.Module, device: str) -> tuple[float, dict[str, Any]]:
+def evaluate_vit(
+    model: VQAModel, data_loader: DataLoader, criterion: nn.Module, device: str
+) -> tuple[float, dict[str, Any]]:
     model.eval()
     losses = []
     predictions, labels_seen = [], []
@@ -166,9 +166,16 @@ def main() -> None:
     test_ds = VitRobertaDataset(test_data, config.IMAGE_DIR, label2idx, tokenizer, image_processor)
 
     num_workers = 2 if device == "cuda" else 0
-    train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=num_workers, pin_memory=(device == "cuda"))
-    val_loader = DataLoader(val_ds, batch_size=args.eval_batch_size, shuffle=False, num_workers=num_workers, pin_memory=(device == "cuda"))
-    test_loader = DataLoader(test_ds, batch_size=args.eval_batch_size, shuffle=False, num_workers=num_workers, pin_memory=(device == "cuda"))
+    pin_mem = device == "cuda"
+    train_loader = DataLoader(
+        train_ds, batch_size=args.batch_size, shuffle=True, num_workers=num_workers, pin_memory=pin_mem
+    )
+    val_loader = DataLoader(
+        val_ds, batch_size=args.eval_batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_mem
+    )
+    test_loader = DataLoader(
+        test_ds, batch_size=args.eval_batch_size, shuffle=False, num_workers=num_workers, pin_memory=pin_mem
+    )
 
     # 3. Model
     logger.info("Building ViT + RoBERTa model...")
@@ -296,8 +303,18 @@ def main() -> None:
     test_loss, final_test_m = evaluate_vit(model, test_loader, criterion, device)
 
     logger.info("=== FINAL RESULTS ===")
-    logger.info("Validation Loss: %.4f | Accuracy: %.4f | Macro F1: %.4f", val_loss, final_val_m["accuracy"], final_val_m["macro_f1"])
-    logger.info("Test Loss:       %.4f | Accuracy: %.4f | Macro F1: %.4f", test_loss, final_test_m["accuracy"], final_test_m["macro_f1"])
+    logger.info(
+        "Validation Loss: %.4f | Accuracy: %.4f | Macro F1: %.4f",
+        val_loss,
+        final_val_m["accuracy"],
+        final_val_m["macro_f1"],
+    )
+    logger.info(
+        "Test Loss:       %.4f | Accuracy: %.4f | Macro F1: %.4f",
+        test_loss,
+        final_test_m["accuracy"],
+        final_test_m["macro_f1"],
+    )
 
     # Save final model
     torch.save(

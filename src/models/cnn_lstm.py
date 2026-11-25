@@ -115,7 +115,8 @@ class VQAModel(nn.Module):
             hidden_dim=hidden_size,
         )
 
-        # Fusion: attended visual features (hidden_size) + question features (hidden_size * 2) = hidden_size * 3
+        # Fusion: attended visual features (hidden_size) +
+        # question features (hidden_size * 2) = hidden_size * 3
         self.fc1 = nn.Linear(hidden_size + lstm_dim, hidden_size)
         self.dropout = nn.Dropout(drop_p)
         self.gelu = nn.GELU()
